@@ -1,0 +1,56 @@
+echo none
+variable jumpname index lmp_fitting_mix # for "jump" filename
+#variable repli equal 4 # times for replicate
+include mixindex.in
+label data
+
+clear
+
+units metal 
+dimension 3 
+boundary p p p
+box tilt large 
+atom_style atomic 
+atom_modify map array
+read_data ${filename}
+#variable a loop 55
+
+
+# ---------- Define Interatomic Potential ---------------------  
+                                         
+pair_style meam/c
+pair_coeff * * ref.lib Pd Rh Co Ce Pt  ref.meam Pd Rh Co Ce Pt 
+
+#---------------------------------------------
+
+change_box all triclinic
+
+neighbor 0.3 bin 
+neigh_modify every 1 check yes one 5000
+
+#label data
+#read_dump dump_${filename} 0 x y z box yes
+#write_data scale.data
+
+# the read-in structure is the optimized one
+thermo_style custom etotal pxx pyy pzz pxy pxz pyz
+run 0
+#if "${a}<=10" then &
+#"print 'pxx $(pxx)' append output.dat screen no" &
+#"print 'pyy $(pyy)' append output.dat screen no" &
+#"print 'pzz $(pzz)' append output.dat screen no" &
+#"print 'pxy $(pxy)' append output.dat screen no" &
+#"print 'pxz $(pxz)' append output.dat screen no" &
+#"print 'pyz $(pyz)' append output.dat screen no" 
+
+
+variable atomnum equal count(all)
+variable etotal equal etotal
+variable be equal ${etotal}/${atomnum}
+
+print "Mixref ${be} " append output.dat screen no
+#print "Mixref ${be}"
+#next a
+next filename 
+jump lmp_fitting_mix.in data
+

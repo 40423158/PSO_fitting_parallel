@@ -1,0 +1,63 @@
+#echo none
+
+log NPT.log
+units metal 
+dimension 3 
+boundary p p p 
+box tilt large
+atom_style atomic 
+atom_modify map array
+# ---------- Create Atoms ---------------------
+#include readstru.in 
+read_data 00MC_03839.data
+#replicate 2 2 2
+#shell cd MgCa_NPT
+#read_data after_min.data
+#shell cd ..
+#include scale.in
+# ---------- Define Interatomic Potential --------------------- 
+pair_style meam/c
+pair_coeff * * ref.lib Al Nb Ta Ti Zr Mo  ref.meam  Al Nb Ta Ti Zr Mo 
+#---------------------------------------------
+
+neighbor 1 bin 
+neigh_modify every 1 check yes one 5000
+#shell rmdir -r HEA_NPT
+
+shell mkdir HEA_NPT
+
+shell cd HEA_NPT
+
+write_data initial.data
+
+variable atomnum equal count(all)
+fix 5 all box/relax  aniso 0.0
+
+min_style	     cg
+thermo 1
+thermo_style custom step temp density lx press pxx pyy pzz pxy pxz pyz pe
+dump 1 all custom 50 00MIN_*.cfg id type x y z
+minimize 0 0 5000 5000
+
+unfix 5
+undump 1
+write_data after_min.data
+#replicate 2 2 2
+#change_box all x scale 3 y scale 3
+# the read-in structure is the optimized one
+
+timestep 0.001
+velocity all create 300 12345 mom yes rot yes dist gaussian
+velocity all scale 300
+fix 1 all npt temp 300 300 0.1 aniso 0.0 0.0 1.0
+#fix 1 all nvt temp 1.0 1.0 0.1
+thermo 100 
+thermo_style custom step temp density pxx pyy pzz pe
+dump 1 all custom 100 00NPT_*.cfg id type x y z
+run 50000
+unfix 1
+undump 1
+
+shell cd ..
+	                               
+
