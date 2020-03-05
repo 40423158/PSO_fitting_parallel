@@ -1,10 +1,18 @@
-echo none
+# Four terms should be modified by Perl
+
+#lmp_fitting # jumpname %s
+#ref.meam # potential %s
+#output.dat # output filename %s
+#output.dat # output filename %s
+#echo none
 
 include crystalindex.in #filename inside
 
 label data # data loop
 clear
-variable jumpname index lmp_fitting # for "jump" filename
+
+#variable jumpname index lmp_fitting #*******1. FM for "jump" filename
+variable jumpname index %s # for "jump" filename
 
 variable changeratio equal 0.01 #this value must be the same as used in dmol3 for B1 unit cell length 
 variable compress equal 5
@@ -25,7 +33,8 @@ change_box all xy final 0.0 xz final 0.0 yz final 0.0 remap units box
 change_box all triclinic
 # ---------- Define Interatomic Potential ---------------------                                 
 pair_style meam/c
-pair_coeff * * ref.lib Pd Rh Co Ce Pt  ref.meam Pd Rh Co Ce Pt
+#pair_coeff * * ref.lib Pd Rh Co Ce Pt  ref.meam Pd Rh Co Ce Pt #*** 2. FM
+pair_coeff * * ref.lib Pd Rh Co Ce Pt  %s Pd Rh Co Ce Pt
 #---------------------------------------------
 
 neighbor 0.3 bin 
@@ -35,7 +44,8 @@ neigh_modify every 1 check yes one 5000
 thermo_style custom etotal pxx pyy pzz 
 run 0
 ## use the most stable structure 
-print "pxx $(pxx)" append output.dat screen no
+#print "pxx $(pxx)" append output.dat screen no #*** 3.FM
+print "pxx $(pxx)" append %s screen no
 #print "pyy $(pyy)" append output.dat screen no
 #print "pzz $(pzz)" append output.dat screen no
 
@@ -91,7 +101,8 @@ run 0
 variable etotal equal etotal
 variable be equal ${etotal}/${atomnum}
 variable templattice equal ${lattice}
-print "${templattice} ${be}" append output.dat screen no
+#print "${templattice} ${be}" append output.dat screen no #*** 4. FM
+print "${templattice} ${be}" append %s screen no
 
 next total
 jump ${jumpname}.in fitting #follow the label

@@ -24,6 +24,7 @@ require './output4better.pl';
 require './para_modify.pl';# modify the parameters further
 require './para_constraint.pl';
 my @element = qw(Pd Rh Co Ce Pt);
+
 ##### remove old files first
 my @oldfiles = <*.meam_*_*>;
 for (@oldfiles){
@@ -34,6 +35,7 @@ for (@oldfiles){
 my $rerun = "No"; ## (Yes or No) case sensitive********* If you make it to "Yes",change para_array.dat to para_array_rerun.dat
 ############# The following are the conditions for different reference data groups (Yes or No, case sensitive) 
 my %conditions;
+$conditions{lmpexe} = "lmp_mpi -l none -sc none -in"; # filename
 $conditions{elastic} = "No";
 $conditions{crystal} = "Yes";
 $conditions{mix} = "Yes";
@@ -44,6 +46,8 @@ my @refdata;
 my @refname; 
 my @weight_value;
 my @constraintID; # used if the parameters have some constraining conditions
+my @fitness; # fitness for each particle
+my @lmpdata;# lmp calculation results for each particle
 &read_ref(\@refdata,\@refname,\@weight_value,\%conditions);
 
 #print"@allfiles";
@@ -51,8 +55,20 @@ open my $temp , "<Template.meam" or die "No Template.meam";
 $meamtemplate = "";
 while($_=<$temp>){$meamtemplate.=$_;}
 close $temp;
-my $Number_of_iterations=5000;
-my $Number_of_particles=200;# particles number is 4 times dimensions
+my $Number_of_iterations=2;
+my $Number_of_particles=10;# particles number is 4 times dimensions
+# making required files for Forkmanager
+
+for $fID (0..$Number_of_particles-1){
+	
+	
+	
+}
+
+
+
+
+
 my $gfBest=1e40; ##set a super large initial value for global minimum
 my @gBest; 
 my $c1=2.; ##@
@@ -185,45 +201,63 @@ for(my $iteration=1; $iteration < $Number_of_iterations;  $iteration++){
 	print "##### ****This is the iteration time for $iteration**** \n\n";
 for (my $i=0 ; $i<$Number_of_particles; $i++){# the first particle loop begins for getting fitness from PSO_fitness.pl   	
    	#print "Current iteration: $iteration, Current Particle:$i\n";
-   	
-   	@temp=();   	
+# fork here   	
+   	my @temp;   	
    	 for ($ipush=0; $ipush<$dimension; $ipush++){
    	      $temp[$ipush]=$x[$i][$ipush];
    	 }
    	
    	#print "$meamtemplate\n";
    	
-   	unlink "ref.meam";   
+   	unlink "ref.meam";   #!!
    	open MEAMin , ">ref.meam";
    	printf MEAMin "$meamtemplate",@temp;
    	close MEAMin;
    	
 ### get the fitness here
-     my $fitness;
-     my @lmpdata; #data from lmps calculation
-     $fitness = &PSO_fitness(\@refdata,\@weight_value,\@lmpdata,\%conditions); #passing ram address
-        
-      if ($fitness < $pfBest[$i])
+     #my $fitness;
+     #my @lmpdata; #data from lmps calculation
+     $fitness[$i] = &PSO_fitness($i,\@refdata,\@weight_value,\@lmpdata,\%conditions); #passing ram address
+       
+      if ($fitness[$i] < $pfBest[$i])
       {
 #      	print "replaced local\n";
-          $pfBest[$i]=$fitness;
+          $pfBest[$i]=$fitness[i];
           for (my $j=0; $j < $dimension; $j++)
           {
                $pBest[$i][$j]=$x[$i][$j];
           }
       }
 
-if ($fitness <= $gfBest){
-	$gfBest = $fitness;
-	for (my $j=0; $j < $dimension; $j++){
-		$gfBest[$i][$j]=$x[$i][$j];
-    }
-	&output4better(\@refdata,\@refname,\@lmpdata,$iteration,$i,$fitness,$gfBest,
-	\@gBest,$summary);#$i is particle ID
-	my $currentbestP = $i;# particle No.
-} 
-
 }# end of the first particle loop for getting fitness from PSO_fitness.pl
+ 
+#keep the lowest fitness among all particles between two particle loops
+
+my @indices = sort { $fitness[$a] <=> $fitness[$b] }  0 .. $#fitness;
+my $lowestfitID = $indices[0]; 
+
+print "***lowestfitID: $lowestfitID\n";
+
+for $ID (0..$#fitness){
+	print "###***** $ID $fitness[$ID]\n";
+	
+	#for $ld (0..$#{$lmpdata[$ID]}){
+	#	print "### Particle: $ID para:$ld value: $lmpdata[$ID][$ld]";
+	#
+	#}	
+}
+
+
+if ($fitness[$lowestfitID] <= $gfBest){
+	$gfBest = $fitness[$lowestfitID];
+	for (my $j=0; $j < $dimension; $j++){
+		$gBest[$j]=$x[$lowestfitID][$j];
+    }
+	&output4better(\@refdata,\@refname,\@lmpdata,$iteration,$lowestfitID,$fitness[$lowestfitID],
+	\@gBest,$summary);#$lowestfitID is the particle ID with the lowest fitness among particles
+	my $currentbestP = $lowestfitID;# particle No.
+} 
+ 
  
 # second particle loop begin for adjust parameter values
 for (my $i=0; $i<$Number_of_particles; $i++)

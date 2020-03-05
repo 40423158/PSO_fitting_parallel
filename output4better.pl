@@ -1,15 +1,15 @@
 sub output4better{
-#&output4better(\@refdata,\@refname,\@lmpdata,$iteration,$i,$fitness,$gfBest,\@gBest);#$i is particle ID
+#&output4better(\@refdata,\@refname,\@lmpdata,$iteration,$lowestfitID,$fitness,\@gBest);#$i is particle ID
   
-my ($refdata_ar,$refname_ar,$lmpdata_ar,$iteration,$i,$fitness,$gfBest,$gBest_ar,$summary_hd) = @_;
+my ($refdata_ar,$refname_ar,$lmpdata_ar,$iteration,$lowestfitID,$fitness,$gBest_ar,$summary_hd) = @_;
 
 print $summary_hd "Lower global fitness: $fitness, Iteration: $iteration, Particle: $i\n";
-print "******** Current Best iteration: $iteration, Particle: $i\n";
+print "******** Current Best iteration: $iteration, Particle: $lowestfitID\n";
 print "******** Current Best fitness: $fitness\n";
 print "\n\n";
 
-unlink "Bestfitted.meam_I$iteration" . "_P$i";
-copy("ref.meam","Bestfitted.meam_I$iteration" . "_P$i");
+unlink "Bestfitted.meam_I$iteration" . "_P$lowestfitID";
+copy("ref.meam","Bestfitted.meam_I$iteration" . "_P$lowestfitID");
 unlink "Bestfitted.meam";
 copy("ref.meam","Bestfitted.meam");
 #system("copy ref.meam Bestfitted.meam_I$iteration" . "_P$i" . " > \$null");# keep the current best potential file
@@ -20,9 +20,9 @@ unlink "$filename"; #remove the old file
 
 open ss,"> $filename"; # write data into BestCrystal.dat
 for (0..$#{$refdata_ar}) {
-   my $error = 100*($lmpdata_ar->[$_] - $refdata_ar->[$_])/$refdata_ar->[$_];
+   my $error = 100*($lmpdata_ar->[$lowestfitID]->[$_] - $refdata_ar->[$_])/$refdata_ar->[$_];
    printf ss "%15s lmp: %12.6f ref: %12.6f err: %12.6f %\n",$refname_ar->[$_],
-   $lmpdata_ar->[$_],$refdata_ar->[$_],$error;
+   $lmpdata_ar->[$lowestfitID]->[$_],$refdata_ar->[$_],$error;
 }
 close ss;
 
