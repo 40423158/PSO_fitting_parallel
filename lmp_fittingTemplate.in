@@ -1,10 +1,11 @@
 # Four terms should be modified by Perl
 
-#lmp_fitting # jumpname %s
-#ref.meam # potential %s
-#output.dat # output filename %s
-#output.dat # output filename %s
-#echo none
+#lmp_fitting # jumpname 
+#ref.meam # potential 
+#output.dat # output filename
+#output.dat # output filename
+ 
+echo none
 
 include crystalindex.in #filename inside
 

@@ -8,17 +8,17 @@ my @cry_refinput;# new and empty array
 my @mix_refinput;
 
 if($conditions_hr->{crystal} eq "Yes"){
-	open ss,"< CrystalW.txt"; #From preprocessor
-	my @cry_array=<ss>;
+	open $ss,"< CrystalW.txt"; #From preprocessor
+	my @cry_array=<$ss>;
 	@cry_refinput=grep (($_!~m/^\s*$/),@cry_array); 
-	close ss;   
+	close $ss;   
 }
 
 if($conditions_hr->{mix} eq "Yes"){
-	open ss,"< MixW.txt"; #From preprocessor
-	my @mix_array=<ss>;
+	open $ss,"< MixW.txt"; #From preprocessor
+	my @mix_array=<$ss>;
 	@mix_refinput=grep (($_!~m/^\s*$/),@mix_array);  
-	close ss;   
+	close $ss;   
 }
  
 my @comb_array = (@cry_refinput,@mix_refinput);# the reason for claim arrays before if  

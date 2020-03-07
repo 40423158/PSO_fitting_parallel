@@ -1,5 +1,12 @@
+# Three terms should be modified by Perl
+
+#lmp_fitting_mix # jumpname 
+#ref.meam # potential 
+#output.dat # output filename
+
 echo none
-variable jumpname index lmp_fitting_mix # for "jump" filename
+#variable jumpname index lmp_fitting_mix #####1. FM
+variable jumpname index %s # for "jump" filename
 include mixindex.in
 label data #loop 
 
@@ -16,7 +23,8 @@ read_data ${filename}
 # ---------- Define Interatomic Potential ---------------------  
                                          
 pair_style meam/c
-pair_coeff * * ref.lib Pd Rh Co Ce Pt  ref.meam Pd Rh Co Ce Pt 
+#pair_coeff * * ref.lib Pd Rh Co Ce Pt  ref.meam Pd Rh Co Ce Pt ######2. FM 
+pair_coeff * * ref.lib Pd Rh Co Ce Pt  %s Pd Rh Co Ce Pt 
 
 #---------------------------------------------
 
@@ -32,6 +40,7 @@ variable atomnum equal count(all)
 variable etotal equal etotal
 variable be equal ${etotal}/${atomnum}
 
-print "Mixref ${be} " append output.dat screen no
+#print "Mixref ${be} " append output.dat screen no ######3. FM
+print "Mixref ${be} " append %s screen no
 next filename 
-jump lmp_fitting_mix.in data
+jump ${jumpname}.in data

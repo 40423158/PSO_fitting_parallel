@@ -18,12 +18,18 @@
 # 2. stochastic particle swarm method was implemented.
 # 3. brand new verson built on 2020/02/24 by Prof. Shin-Pon Ju
 use File::Copy; 
+use MCE::Shared;
+use Parallel::ForkManager;
+
 require './PSO_fitness.pl';
 require './read_ref.pl';
 require './output4better.pl';
 require './para_modify.pl';# modify the parameters further
 require './para_constraint.pl';
 my @element = qw(Pd Rh Co Ce Pt);
+
+my $forkNo = 8;
+my $pm = Parallel::ForkManager->new("$forkNo");
 
 ##### remove old files first
 my @oldfiles = <*.meam_*_*>;
@@ -36,39 +42,80 @@ my $rerun = "No"; ## (Yes or No) case sensitive********* If you make it to "Yes"
 ############# The following are the conditions for different reference data groups (Yes or No, case sensitive) 
 my %conditions;
 $conditions{lmpexe} = "lmp_mpi -l none -sc none -in"; # filename
-$conditions{elastic} = "No";
+$conditions{elastic} = "No"; # not modify to FM currently!!!!
 $conditions{crystal} = "Yes";
 $conditions{mix} = "Yes";
 $conditions{para_modified} = "Yes";# If yes, you will modify parameters
 # and see 00paraRange_informationModify.dat for real parameter range for PSO_fitting 
-
+my $lowestfitID; # keep the particle ID for the lowest-fitness one 
 my @refdata; 
 my @refname; 
 my @weight_value;
 my @constraintID; # used if the parameters have some constraining conditions
-my @fitness; # fitness for each particle
-my @lmpdata;# lmp calculation results for each particle
+tie my @fitness,'MCE::Shared'; # fitness for each particle
+tie my @lmpdata, 'MCE::Shared';# lmp calculation results for each particle
 &read_ref(\@refdata,\@refname,\@weight_value,\%conditions);
 
 #print"@allfiles";
 open my $temp , "<Template.meam" or die "No Template.meam";
-$meamtemplate = "";
+my $meamtemplate;
 while($_=<$temp>){$meamtemplate.=$_;}
 close $temp;
-my $Number_of_iterations=2;
-my $Number_of_particles=10;# particles number is 4 times dimensions
+my $Number_of_iterations= 5000;
+my $Number_of_particles = 240;# particles number is 4 times dimensions
 # making required files for Forkmanager
+# For crstal part template
+open my $temp , "<lmp_fittingTemplate.in" or die "lmp_fittingTemplate.in";
+my $lmp_fittingIn;
+while($_=<$temp>){$lmp_fittingIn.=$_;}
+close $temp;
 
-for $fID (0..$Number_of_particles-1){
+open my $temp , "<lmp_fitting_mixTemplate.in" or die "lmp_fitting_mixTemplate.in";
+my $lmp_fitting_mixIn;
+while($_=<$temp>){$lmp_fitting_mixIn.=$_;}
+close $temp;
+
+my @test = <"lmp_fitting*.in">;
+my @temp = grep (($_=~m/lmp_fitting\d+/),@test);
+for (@temp){unlink "$_";} 
+
+
+my @test = <"ref*.meam">;
+my @temp = grep (($_=~m/ref\d+/),@test);
+for (@temp){unlink "$_";} 
+
+my @test = <"output*.dat">;
+my @temp = grep (($_=~m/output\d+/),@test);
+for (@temp){unlink "$_";} 
+
+for my $fID (0..($Number_of_particles-1)){	
+# making lmp_fitting.in for each particle	
+	my @temp;
+	$temp[0] = "lmp_fitting$fID";# jumpname
+	$temp[1] = "ref$fID.meam";# potential
+	$temp[2] = "output$fID.dat";#pxx
+	$temp[3] = "output$fID.dat";#energy 
 	
+	unlink "lmp_fitting$fID.in";   #!!
+   	open my $crystalIn , ">lmp_fitting$fID.in";
+   	printf $crystalIn "$lmp_fittingIn",@temp;
+   	close $crystalIn;
+   	
+# making lmp_fitting_mix.in for each particle	
+	my @temp;
+	$temp[0] = "lmp_fitting_mix$fID";# jumpname
+	$temp[1] = "ref$fID.meam";# potential
+	$temp[2] = "output$fID.dat";#pxx
 	
-	
+	unlink "lmp_fitting_mix$fID.in";   #!!
+   	open my $mixIn , ">lmp_fitting_mix$fID.in";
+   	printf $mixIn "$lmp_fitting_mixIn",@temp;
+   	close $mixIn;   		
 }
-
-
-
-
-
+#print "Sleep 1\n";
+#sleep(100);
+tie my @pfBest, 'MCE::Shared';
+tie my @pBest, 'MCE::Shared';
 my $gfBest=1e40; ##set a super large initial value for global minimum
 my @gBest; 
 my $c1=2.; ##@
@@ -79,6 +126,7 @@ my @v_max;
 my @v_min; 
 my @x_range;
 my @x;
+my @v;
 
 # lower and upper bounds of all parameters
 open my $max , "<ALLPSOmax.dat" or die "No ALLPSOmax.dat";
@@ -179,21 +227,20 @@ for (my $i=0; $i<$Number_of_particles; $i++){
 
 ## rerun this script     
 #### If we have got the best parameter already and want to rerun this fitting script
-    if($rerun eq "Yes" and $i == 0){
+    if($rerun eq "Yes"){
     	print "**rerun work for the initial value of Particle 0***\n";
-		  @temppara = ();
+		  my @temppara;
 		  unlink "para_array_rerun.dat";
 		  #system("copy para_array.dat para_array_rerun.dat");    	
   		copy("para_array.dat","para_array_rerun.dat");
-  		open rerunarray , "<para_array_rerun.dat";
-  		@temppara=<rerunarray>;
-  		close rerunarray;
-  		for ($j=0; $j < $dimension; $j++)
-      {
-       chomp $temppara[$j];	
-  	   $x[$k][$j]=$temppara[$j];
-  	   #print "j $j $x[$i][$j] $temppara[$j]\n";
-      }
+  		open my $rerunarray , "<para_array_rerun.dat";
+  		@temppara=<$rerunarray>;
+  		close $rerunarray;
+  		for (my $j=0; $j < $dimension; $j++){
+			chomp $temppara[$j];	
+			$x[0][$j]=$temppara[$j];## assign last best parameters to the first particle 
+			#print "j $j $x[$i][$j] $temppara[$j]\n";
+       }
     }
 
 #####  iteration loop begins
@@ -201,52 +248,50 @@ for(my $iteration=1; $iteration < $Number_of_iterations;  $iteration++){
 	print "##### ****This is the iteration time for $iteration**** \n\n";
 for (my $i=0 ; $i<$Number_of_particles; $i++){# the first particle loop begins for getting fitness from PSO_fitness.pl   	
    	#print "Current iteration: $iteration, Current Particle:$i\n";
-# fork here   	
+# fork here
+$pm->start and next;   	
    	my @temp;   	
-   	 for ($ipush=0; $ipush<$dimension; $ipush++){
+   	 for (my $ipush=0; $ipush<$dimension; $ipush++){
    	      $temp[$ipush]=$x[$i][$ipush];
    	 }
    	
    	#print "$meamtemplate\n";
    	
-   	unlink "ref.meam";   #!!
-   	open MEAMin , ">ref.meam";
-   	printf MEAMin "$meamtemplate",@temp;
-   	close MEAMin;
+   	unlink "ref$i.meam";   #!!
+   	open my $MEAMin , "> ref$i.meam";
+   	printf $MEAMin "$meamtemplate",@temp;
+   	close $MEAMin;
    	
 ### get the fitness here
      #my $fitness;
      #my @lmpdata; #data from lmps calculation
      $fitness[$i] = &PSO_fitness($i,\@refdata,\@weight_value,\@lmpdata,\%conditions); #passing ram address
-       
+      #print "######Before If\n";
+      #     	print "pfBest $i, $pfBest[$i],fitness:$fitness[$i] ######replaced local\n";
+  
       if ($fitness[$i] < $pfBest[$i])
       {
-#      	print "replaced local\n";
-          $pfBest[$i]=$fitness[i];
+          $pfBest[$i] = $fitness[$i];
+ 
           for (my $j=0; $j < $dimension; $j++)
           {
                $pBest[$i][$j]=$x[$i][$j];
           }
       }
-
+$pm->finish;
 }# end of the first particle loop for getting fitness from PSO_fitness.pl
- 
+$pm->wait_all_children; 
 #keep the lowest fitness among all particles between two particle loops
 
 my @indices = sort { $fitness[$a] <=> $fitness[$b] }  0 .. $#fitness;
-my $lowestfitID = $indices[0]; 
+$lowestfitID = $indices[0]; 
 
-print "***lowestfitID: $lowestfitID\n";
+print "***Iteration: $iteration, lowestfitness Particle ID : $lowestfitID\n";
 
-for $ID (0..$#fitness){
-	print "###***** $ID $fitness[$ID]\n";
-	
-	#for $ld (0..$#{$lmpdata[$ID]}){
-	#	print "### Particle: $ID para:$ld value: $lmpdata[$ID][$ld]";
-	#
-	#}	
+for my $ID (0..$#fitness){
+	print "particleID, fitness: $ID, $fitness[$ID]\n";		
 }
-
+#print "\n";
 
 if ($fitness[$lowestfitID] <= $gfBest){
 	$gfBest = $fitness[$lowestfitID];
@@ -266,7 +311,7 @@ for (my $i=0; $i<$Number_of_particles; $i++)
      # $r1=$c1*rand(1);
      # $r2=$c2*rand(1);
    
-      for ($j=0; $j < $dimension; $j++)
+      for (my $j=0; $j < $dimension; $j++)
       {
          $v[$i][$j] =$c1*rand(1)* ($pBest[$i][$j] - $x[$i][$j]) +  $c2*rand(1) * ($gBest[$j] - $x[$i][$j]); 
          $x[$i][$j] = $x[$i][$j] + $v[$i][$j];
@@ -285,36 +330,25 @@ if ($conditions{para_constraint} eq "Yes"){
 } 
 #########
             #print "********* $i local: $pfBest[$i]  glo: $gfBest $i\n\n";
-            $tempdifference= $gfBest-$pfBest[$i];
-              if (abs($tempdifference) <= 100.0){
-              print "####  $tempdifference <-difference with global best fitness for $iteration iteration****\n";
-              print "####Global best fitness: $gfBest, Particle $i: $pfBest[$i]####\n";}
-              print "\n"; 	
-				if($iteration%50 == 0 or $pfBest[$i] == $gfBest ){
-            if($pfBest[$i] == $gfBest){print "#####*********particle $i: gbest $pfBest[$i] == $gfBest pbest\n";};
-              
-            if ($i == 0)  { 
-            print "*********MAKE ALL PARTICLES in RANDOM for iteration $iteration\n";}
-            	#print "********* $i local: $pfBest[$i]  glo: $gfBest $i\n\n";
-            	#print "********* currentbestP: $currentbestP ## iteration: $iteration\n";
-         	    #$tempi = rand(1);
-         	    #$tempdr = (rand(2)-1.0)/100.0;
-         	    #$r1=$c1*rand(1);
-              #$r2=$c2*rand(1);
-         	    for ($j=0; $j < $dimension; $j++)
-         	   {                 
-                $x[$i][$j]=$x_min[$j]+rand(1)*$x_range[$j];
-    						
-    						######################***********************
-                $pBest[$i][$j] = $x_min[$j]+rand(1)*$x_range[$j];
-                 
-                               
+            my $differPercent= (($gfBest-$pfBest[$i])/$gfBest)*100.;
+            #print "P: $i, pfBest: $pfBest[$i],gfbest: $gfBest differPercent: $differPercent\n";
+              if (abs($differPercent) <= 1.0){
+				print "####  $differPercent <-difference percentage with global best fitness for $iteration iteration****\n";
+				print "####Global best fitness: $gfBest, Particle $i: $pfBest[$i]####\n";
               }
-## imposing constraints			
-if ($conditions{para_constraint} eq "Yes"){
-		&para_constraint($i,\@x,\@x_min,\@x_max,\%Cmin,\%Cmax);
-} 
-             $pfBest[$i]=1e40;## make all Particle best accepted after the random parameters generation
+## make parameters random for the following conditions              
+			 if($iteration%50 == 0 or $pfBest[$i] == $gfBest ){
+					if($pfBest[$i] == $gfBest){print "#####*********particle $i: gbest $pfBest[$i] == $gfBest pbest\n\n";};
+					if ($i == 0)  {print "*********MAKE ALL PARTICLES' PARAMETERS in RANDOM at iteration $iteration\n";}
+						for (my $j=0; $j < $dimension; $j++){                 
+							$x[$i][$j]=$x_min[$j]+rand(1)*$x_range[$j];
+							$pBest[$i][$j] = $x_min[$j]+rand(1)*$x_range[$j];
+					    }
+							## imposing constraints			
+						if ($conditions{para_constraint} eq "Yes"){
+								&para_constraint($i,\@x,\@x_min,\@x_max,\%Cmin,\%Cmax);
+						} 
+					$pfBest[$i]=1e40;## make all Particle best accepted after the random parameters generation
          	 }
 } # end of the second particle loop
 }#iteration loop
