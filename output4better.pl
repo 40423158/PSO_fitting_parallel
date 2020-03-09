@@ -3,7 +3,7 @@ sub output4better{
   
 my ($refdata_ar,$refname_ar,$lmpdata_ar,$iteration,$lowestfitID,$fitness,$gBest_ar,$summary_hd) = @_;
 
-print $summary_hd "Lower global fitness: $fitness, Iteration: $iteration, Particle: $i\n";
+print $summary_hd "Lower global fitness: $fitness, Iteration: $iteration, Particle: $lowestfitID\n";
 print "******** Current Best iteration: $iteration, Particle: $lowestfitID\n";
 print "******** Current Best fitness: $fitness\n";
 print "\n\n";
