@@ -17,6 +17,8 @@
 # 1. modify on 2016/10/15
 # 2. stochastic particle swarm method was implemented.
 # 3. brand new verson built on 2020/02/24 by Prof. Shin-Pon Ju
+use strict;
+use warnings;
 use File::Copy; 
 use MCE::Shared;
 use Parallel::ForkManager;
@@ -57,59 +59,62 @@ tie my @lmpdata, 'MCE::Shared';# lmp calculation results for each particle
 &read_ref(\@refdata,\@refname,\@weight_value,\%conditions);
 
 #print"@allfiles";
-open my $temp , "<Template.meam" or die "No Template.meam";
+open my $temp1 , "<Template.meam" or die "No Template.meam";
 my $meamtemplate;
-while($_=<$temp>){$meamtemplate.=$_;}
-close $temp;
+while($_=<$temp1>){$meamtemplate.=$_;}
+close $temp1;
 my $Number_of_iterations= 5000;
 my $Number_of_particles = 240;# particles number is 4 times dimensions
 # making required files for Forkmanager
 # For crstal part template
-open my $temp , "<lmp_fittingTemplate.in" or die "lmp_fittingTemplate.in";
+open my $temp2 , "<lmp_fittingTemplate.in" or die "lmp_fittingTemplate.in";
 my $lmp_fittingIn;
-while($_=<$temp>){$lmp_fittingIn.=$_;}
-close $temp;
+while($_=<$temp2>){$lmp_fittingIn.=$_;}
+close $temp2;
 
-open my $temp , "<lmp_fitting_mixTemplate.in" or die "lmp_fitting_mixTemplate.in";
+open my $temp3 , "<lmp_fitting_mixTemplate.in" or die "lmp_fitting_mixTemplate.in";
 my $lmp_fitting_mixIn;
-while($_=<$temp>){$lmp_fitting_mixIn.=$_;}
-close $temp;
+while($_=<$temp3>){$lmp_fitting_mixIn.=$_;}
+close $temp3;
 
-my @test = <"lmp_fitting*.in">;
-my @temp = grep (($_=~m/lmp_fitting\d+/),@test);
-for (@temp){unlink "$_";} 
+my @testA = <"lmp_fitting*.in">;
+my @tempA = grep (($_=~m/lmp_fitting\d+/),@testA);
+for (@tempA){unlink "$_";} 
 
+my @testB = <"lmp_fitting_mix*.in">;
+my @tempB = grep (($_=~m/lmp_fitting_mix\d+/),@testB);
+for (@tempB){unlink "$_";} 
 
-my @test = <"ref*.meam">;
-my @temp = grep (($_=~m/ref\d+/),@test);
-for (@temp){unlink "$_";} 
+my @testC = <"ref*.meam">;
+my @tempC = grep (($_=~m/ref\d+/),@testC);
+for (@tempC){unlink "$_";} 
 
-my @test = <"output*.dat">;
-my @temp = grep (($_=~m/output\d+/),@test);
-for (@temp){unlink "$_";} 
+my @testD = <"output*.dat">;
+my @tempD = grep (($_=~m/output\d+/),@testD);
+for (@tempD){unlink "$_";} 
 
 for my $fID (0..($Number_of_particles-1)){	
 # making lmp_fitting.in for each particle	
-	my @temp;
-	$temp[0] = "lmp_fitting$fID";# jumpname
-	$temp[1] = "ref$fID.meam";# potential
-	$temp[2] = "output$fID.dat";#pxx
-	$temp[3] = "output$fID.dat";#energy 
+	my @temp_lmp1;
+	$temp_lmp1[0] = "lmp_fitting$fID";# jumpname
+	$temp_lmp1[1] = "ref$fID.meam";# potential
+	$temp_lmp1[2] = "output$fID.dat";#pxx
+	$temp_lmp1[3] = "output$fID.dat";#energy 
 	
-	unlink "lmp_fitting$fID.in";   #!!
+	#unlink "lmp_fitting$fID.in";   #!!
    	open my $crystalIn , ">lmp_fitting$fID.in";
-   	printf $crystalIn "$lmp_fittingIn",@temp;
+   	printf $crystalIn "$lmp_fittingIn",@temp_lmp1;
    	close $crystalIn;
    	
 # making lmp_fitting_mix.in for each particle	
-	my @temp;
-	$temp[0] = "lmp_fitting_mix$fID";# jumpname
-	$temp[1] = "ref$fID.meam";# potential
-	$temp[2] = "output$fID.dat";#pxx
+	my @temp_lmp2;
+	$temp_lmp2[0] = "lmp_fitting_mix$fID";# jumpname
+	$temp_lmp2[1] = "ref$fID.meam";# potential
+	$temp_lmp2[2] = "output$fID.dat";#pxx
 	
-	unlink "lmp_fitting_mix$fID.in";   #!!
+	#unlink "lmp_fitting_mix$fID.in";   #!!
    	open my $mixIn , ">lmp_fitting_mix$fID.in";
-   	printf $mixIn "$lmp_fitting_mixIn",@temp;
+   	printf $mixIn "$lmp_fitting_mixIn",@temp_lmp2;
    	close $mixIn;   		
 }
 #print "Sleep 1\n";
@@ -130,13 +135,13 @@ my @v;
 
 # lower and upper bounds of all parameters
 open my $max , "<ALLPSOmax.dat" or die "No ALLPSOmax.dat";
-my @temp = <$max>;
-my @x_max = grep (($_!~m/^\s*$/),@temp);
+my @temp_max = <$max>;
+my @x_max = grep (($_!~m/^\s*$/),@temp_max);
 close $max;
 
 open my $min , "<ALLPSOmin.dat" or die "No ALLPSOmin.dat";
-my @temp = <$min>;
-my @x_min = grep (($_!~m/^\s*$/),@temp);
+my @temp_min = <$min>;
+my @x_min = grep (($_!~m/^\s*$/),@temp_min);
 close $min;
 
 #Ec(1,3)= %12.3f for MEAM
