@@ -9,9 +9,9 @@ print "******** Current Best fitness: $fitness\n";
 print "\n\n";
 
 unlink "Bestfitted.meam_I$iteration" . "_P$lowestfitID";
-copy("ref.meam","Bestfitted.meam_I$iteration" . "_P$lowestfitID");
+copy("ref$lowestfitID.meam","Bestfitted.meam_I$iteration" . "_P$lowestfitID");
 unlink "Bestfitted.meam";
-copy("ref.meam","Bestfitted.meam");
+copy("ref$lowestfitID.meam","Bestfitted.meam");
 #system("copy ref.meam Bestfitted.meam_I$iteration" . "_P$i" . " > \$null");# keep the current best potential file
 #rename ("Bestfitted.meam","Bestfitted_$iteration");
 
