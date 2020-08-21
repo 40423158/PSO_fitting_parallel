@@ -12,13 +12,13 @@ for my $key(keys %{$Cmax_hr}){
 				if($temp >= 0.5){
 					$x_ar->[$i][$tempCmin] = $x_ar->[$i][$tempCmax] - ($x_ar->[$i][$tempCmax] -$x_min_ar->[$tempCmin])*rand(1);
 					if ($x_ar->[$i][$tempCmin]<$x_min_ar->[$tempCmin]){$x_ar->[$i][$tempCmin]=$x_min_ar->[$tempCmin];}
-         	    	print "$key, $temp, *Cmin: $x_ar->[$i][$tempCmin], Cmax:$x_ar->[$i][$tempCmax] $x_min_ar->[$tempCmin]\n";
-					print " Xmin: $x_min_ar->[$tempCmin], Xmax:$x_max_ar->[$tempCmax]\n\n";
+         	    	#print "$key, $temp, *Cmin: $x_ar->[$i][$tempCmin], Cmax:$x_ar->[$i][$tempCmax] $x_min_ar->[$tempCmin]\n";
+					#print " Xmin: $x_min_ar->[$tempCmin], Xmax:$x_max_ar->[$tempCmax]\n\n";
 		       }else{
 					$x_ar->[$i][$tempCmax] = $x_ar->[$i][$tempCmin] + ($x_max_ar[$tempCmax] - $x_ar->[$i][$tempCmin])*rand(1);
 					if ($x_ar->[$i][$tempCmax]>$x_max_ar[$tempCmax]){$x_ar->[$i][$tempCmax]=$x_max_ar->[$tempCmax];}
-					print "$key, $temp, Cmin: $x_ar->[$i][$tempCmin], *Cmax:$x_ar->[$i][$tempCmax] $x_min_ar->[$tempCmin]\n";
-					print " Xmin: $x_min_ar->[$tempCmin], Xmax:$x_max_ar->[$tempCmax]\n\n";
+					#print "$key, $temp, Cmin: $x_ar->[$i][$tempCmin], *Cmax:$x_ar->[$i][$tempCmax] $x_min_ar->[$tempCmin]\n";
+					#print " Xmin: $x_min_ar->[$tempCmin], Xmax:$x_max_ar->[$tempCmax]\n\n";
 				}
 		}	
 }

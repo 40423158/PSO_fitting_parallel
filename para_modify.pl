@@ -18,7 +18,7 @@ for (0..$#{$x_name_ar}){
 		#if($x_name_ar ->[$_] =~ m/Cmax\((\d),(\d),(\d)/ and ($1 ne $2) and ($2 ne $3) and ($1 ne $3)){
 		if($x_name_ar ->[$_] =~ m/Cmax/){
 		
-			$x_min_ar -> [$_] = 2.5;     #(1.0 - $Modrange*2)*2.8;
+			$x_min_ar -> [$_] = 2.0;     #(1.0 - $Modrange*2)*2.8;
 			$x_max_ar->[$_] = 2.8;      #(1.0 + $Modrange*5)*2.8;
 			print $para_info "*$_: $x_min_ar->[$_] $x_max_ar->[$_] $x_name_ar->[$_] -> $temp\n";
 		}
@@ -26,15 +26,21 @@ for (0..$#{$x_name_ar}){
 		elsif($x_name_ar ->[$_] =~ m/Cmin/){
 		
 			$x_min_ar->[$_] = 0.1;
-			$x_max_ar->[$_] = 2.0;
+			$x_max_ar->[$_] = 0.99;
 			print $para_info "*$_: $x_min_ar->[$_] $x_max_ar->[$_] $x_name_ar->[$_] -> $temp\n";
 		}
         elsif($x_name_ar ->[$_] =~ m/rho0/){
 		
-			$x_min_ar->[$_] = 0.1;
-			$x_max_ar->[$_] = 2.0;
+			$x_min_ar->[$_] = (1.0 - $Modrange2)*1.0;
+			$x_max_ar->[$_] = (1.0 + $Modrange2)*1.0;
 			print $para_info "*$_: $x_min_ar->[$_] $x_max_ar->[$_] $x_name_ar->[$_] -> $temp\n";
-		}				
+		}	
+		elsif($x_name_ar ->[$_] =~ m/Ec/){
+		
+			$x_min_ar->[$_] = (1.0 - 0.1)*$x_min_ar -> [$_];
+			$x_max_ar->[$_] = (1.0 + 0.1)*$x_max_ar->[$_];
+			print $para_info "*$_: $x_min_ar->[$_] $x_max_ar->[$_] $x_name_ar->[$_] -> $temp\n";
+		}					
 		#elsif($x_name_ar ->[$_] =~ m/Cmax\((\d),(\d),(\d)/ and ($1 eq $2) and ($2 ne $3) and ($1 ne $3)){
 		#	$x_min_ar->[$_] = (1.0 - $Modrange*0)*2.5;
 		#	$x_max_ar->[$_] = (1.0 + $Modrange*0)*2.8;

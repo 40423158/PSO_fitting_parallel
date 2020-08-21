@@ -24,7 +24,7 @@ read_data ${filename}
                                          
 pair_style meam/c
 #pair_coeff * * ref.lib Pd Rh Co Ce Pt  ref.meam Pd Rh Co Ce Pt ######2. FM 
-pair_coeff * * ref.lib Pd Rh Co Ce Pt  %s Pd Rh Co Ce Pt 
+pair_coeff * * ref.lib Nb Mo W Ta V   %s Nb Mo W Ta V 
 
 #---------------------------------------------
 

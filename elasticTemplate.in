@@ -42,9 +42,20 @@
 #  that minimization is not required, you can set maxiter = 0.0 in 
 #  init.mod. 
 #
+echo none
+
+include crystalindex.in #filename inside
+
+label data # data loop
+clear
+variable jumpname index %s
 
 include init.mod
-include potential.mod
+read_data ${filename}
+replicate 2 2 2
+change_box all triclinic
+
+include %s
 thermo 100
 # Compute initial state
 fix 3 all box/relax  aniso 0.0
@@ -84,37 +95,37 @@ displace_atoms all random ${atomjiggle} ${atomjiggle} ${atomjiggle} 87287 units 
 
 # Write restart
 unfix 3
-write_restart restart.equil
+write_restart %s
 write_data optimized_elastic.data
 # uxx Perturbation
 
 variable dir equal 1
-include displace.mod
+include %s
 
 # uyy Perturbation
 
 variable dir equal 2
-include displace.mod
+include %s
 
 # uzz Perturbation
 
 variable dir equal 3
-include displace.mod
+include %s
 
 # uyz Perturbation
 
 variable dir equal 4
-include displace.mod
+include %s
 
 # uxz Perturbation
 
 variable dir equal 5
-include displace.mod
+include %s
 
 # uxy Perturbation
 
 variable dir equal 6
-include displace.mod
+include %s
 
 # Output final values
 
@@ -156,8 +167,11 @@ variable bulkmodulus equal (${C11cubic}+2*${C12cubic})/3.0
 variable shearmodulus1 equal ${C44cubic}
 variable shearmodulus2 equal (${C11cubic}-${C12cubic})/2.0
 variable poissonratio equal 1.0/(1.0+${C11cubic}/${C12cubic})
-print "C11 ${C11cubic}" append output.dat screen no
+#print "C11 ${C11cubic}" append output.dat screen no
 #print "C11 ${C11all}" append output.dat screen no
 #print "C12 ${C12all}" append output.dat screen no
 #print "C44 ${C44all}" append output.dat screen no
+print "Bulk ${bulkmodulus}" append %s screen no
 
+next filename
+jump ${jumpname}.in data #follow the label
